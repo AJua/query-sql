@@ -14,6 +14,7 @@ namespace query_sql
                 _time = time;
                 FareAmount = count;
             }
+            public DateTime Time => _time;
             [ColumnName("Label")]
             public float FareAmount { get; }
             //public float Is0000 => _time.ToString("HH:mm") == "00:00"? 1:0;
