@@ -40,7 +40,7 @@ namespace query_sql
             public float Is2100 => _time.ToString("HH:mm") == "21:00" ? 1 : 0;
             public float Is2200 => _time.ToString("HH:mm") == "22:00" ? 1 : 0;
             public float Is2300 => _time.ToString("HH:mm") == "23:00" ? 1 : 0;
-            public float Is1 => _time.Day == 1 ? 1 : 0;
+            //public float Is1 => _time.Day == 1 ? 1 : 0;
             public float Is2 => _time.Day == 2 ? 1 : 0;
             public float Is3 => _time.Day == 3 ? 1 : 0;
             public float Is4 => _time.Day == 4 ? 1 : 0;
@@ -50,6 +50,28 @@ namespace query_sql
             public float Is8 => _time.Day == 8 ? 1 : 0;
             public float Is9 => _time.Day == 9 ? 1 : 0;
             public float Is10 => _time.Day == 10 ? 1 : 0;
+            public float Is11 => _time.Day == 11 ? 1 : 0;
+            public float Is12 => _time.Day == 12 ? 1 : 0;
+            public float Is13 => _time.Day == 13 ? 1 : 0;
+            public float Is14 => _time.Day == 14 ? 1 : 0;
+            public float Is15 => _time.Day == 15 ? 1 : 0;
+            public float Is16 => _time.Day == 16 ? 1 : 0;
+            public float Is17 => _time.Day == 17 ? 1 : 0;
+            public float Is18 => _time.Day == 18 ? 1 : 0;
+            public float Is19 => _time.Day == 19 ? 1 : 0;
+            public float Is20 => _time.Day == 20 ? 1 : 0;
+            public float Is21 => _time.Day == 21 ? 1 : 0;
+            public float Is22 => _time.Day == 22 ? 1 : 0;
+            public float Is23 => _time.Day == 23 ? 1 : 0;
+            public float Is24 => _time.Day == 24 ? 1 : 0;
+            public float Is25 => _time.Day == 25 ? 1 : 0;
+            public float Is26 => _time.Day == 26 ? 1 : 0;
+            public float Is27 => _time.Day == 27 ? 1 : 0;
+            public float Is28 => _time.Day == 28 ? 1 : 0;
+            public float Is29 => _time.Day == 29 ? 1 : 0;
+            public float Is30 => _time.Day == 30 ? 1 : 0;
+            public float Is31 => _time.Day == 31 ? 1 : 0;
+
 
         }
     }
