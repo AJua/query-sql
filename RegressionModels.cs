@@ -2,9 +2,23 @@
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.ML;
+using Microsoft.ML.Data;
 
 namespace query_sql
 {
+    public class ProductSalesData
+    {
+        public DateTime Month;
+
+        public float numSales;
+    }
+
+    public class ProductSalesPrediction
+    {
+        //vector to hold alert,score,p-value values
+        [VectorType(3)]
+        public double[] Prediction { get; set; }
+    }
     internal class RegressionModels
     {
         public static IEnumerable<dynamic> HourlyModel(IEnumerable<MetricWithRegression> timeSeries)
@@ -29,11 +43,11 @@ namespace query_sql
             var predictionFunction = mlContext.Model.CreatePredictionEngine<TaxiTrip, TaxiTripFarePrediction>(model);
 
             return timeSeries.Select(x => new
-                {
-                    x.Time,
-                    x.Count,
-                    HourlyPredict2 = predictionFunction.Predict(new TaxiTrip(x.Time, 0)).FareAmount
-                }
+            {
+                x.Time,
+                x.Count,
+                HourlyPredict2 = predictionFunction.Predict(new TaxiTrip(x.Time, 0)).FareAmount
+            }
             );
         }
         public static IEnumerable<dynamic> HourlyAndDayModel(IEnumerable<MetricWithRegression> timeSeries)
@@ -61,12 +75,45 @@ namespace query_sql
             var predictionFunction = mlContext.Model.CreatePredictionEngine<TaxiTrip, TaxiTripFarePrediction>(model);
 
             return timeSeries.Select(x => new
-                {
-                    x.Time,
-                    x.Count,
-                    HourlyAndDayPredict2 = predictionFunction.Predict(new TaxiTrip(x.Time, 0)).FareAmount
-                }
+            {
+                x.Time,
+                x.Count,
+                HourlyAndDayPredict2 = predictionFunction.Predict(new TaxiTrip(x.Time, 0)).FareAmount
+            }
             );
+        }
+
+        static IDataView CreateEmptyDataView(MLContext mlContext)
+        {
+            // Create empty DataView. We just need the schema to call Fit() for the time series transforms
+            IEnumerable<ProductSalesData> enumerableData = new List<ProductSalesData>();
+            return mlContext.Data.LoadFromEnumerable(enumerableData);
+        }
+
+        public static IEnumerable<dynamic> DetectChangePoint(IEnumerable<TaxiTrip> metrics, string query)
+        {
+            var mlContext = new MLContext();
+            var dataView = mlContext.Data.LoadFromEnumerable(metrics.Select(x => new ProductSalesData(){Month = x.Time, numSales = x.FareAmount}));
+            var iidChangePointEstimator = mlContext.Transforms.DetectIidChangePoint(nameof(ProductSalesPrediction.Prediction), nameof(ProductSalesData.numSales), confidence: 95, changeHistoryLength: metrics.Count()/50);
+            var iidChangePointTransform = iidChangePointEstimator.Fit(CreateEmptyDataView(mlContext));
+            var transformedData = iidChangePointTransform.Transform(dataView);
+            var predictions = mlContext.Data.CreateEnumerable<ProductSalesPrediction>(transformedData, reuseRowObject: false);
+            Console.WriteLine("Alert\tScore\tP-Value\tMartingale value");
+            foreach (var p in predictions)
+            {
+                var results = $"{p.Prediction[0]}\t{p.Prediction[1]:f2}\t{p.Prediction[2]:F2}\t{p.Prediction[3]:F2}";
+
+                if (p.Prediction[0] == 1)
+                {
+                    results += " <-- alert is on, predicted changepoint";
+                }
+                Console.WriteLine(results);
+            }
+            Console.WriteLine("");
+            return metrics.Zip(predictions, (x, y) => new
+            {
+                Id = $"{query}_{nameof(DetectChangePoint)} {x.Time.Ticks}", x.Time, Value = x.FareAmount, IsAlert3 = y.Prediction[0]
+            });
         }
     }
 }

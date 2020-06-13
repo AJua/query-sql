@@ -57,7 +57,9 @@ namespace query_sql
             var resp = request.GetResponse();
             var temp = JsonConvert.DeserializeObject<PrometheusMetric>(new StreamReader(resp.GetResponseStream()).ReadToEnd());
             Console.WriteLine(JsonConvert.SerializeObject(temp.data.result[0].values.Select(x =>
-                new TaxiTrip(UnixTimestampToDateTime(Convert.ToDouble((string?) x[0])), Convert.ToInt32((string?) x[1]))))
+                new TaxiTrip(UnixTimestampToDateTime(Convert.ToDouble((string?) x[0])), Convert.ToInt32((string?) x[1]))).Select( x => 
+                    new {x.Time, x.FareAmount}
+                ))
             );
             return temp.data.result[0].values.Select(x =>
                 new TaxiTrip(UnixTimestampToDateTime(Convert.ToDouble(x[0])), Convert.ToInt32(x[1])));
