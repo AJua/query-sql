@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "query-sql": {
+      "commandName": "Project",
+      "commandLineArgs": "-step 60s -q process_virtual_memory_bytes -offset 12 -source prometheus -i \"1 HOUR\" -index ptt"
+    }
+  }
+}

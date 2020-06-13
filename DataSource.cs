@@ -16,7 +16,8 @@ namespace query_sql
             var unixTimeStampInTicks = (long)(unixTime * TimeSpan.TicksPerSecond);
             return new DateTime(unixStart.Ticks + unixTimeStampInTicks, DateTimeKind.Utc);
         }
-        public static IEnumerable<MetricWithRegression> QuerySqlElasticsearch(string sqlQuery)
+
+        public static IEnumerable<MetricWithRegression> QuerySqlElasticsearch(Arguments args)
         {
             var protocol = Environment.GetEnvironmentVariable("ELASTIC_PROTOCOL");
             var user = Environment.GetEnvironmentVariable("ELASTIC_USER");
@@ -25,11 +26,13 @@ namespace query_sql
             var port = Environment.GetEnvironmentVariable("ELASTIC_PORT");
 
             var uri = new Uri($"{protocol}://{user}:{password}@{host}:{port}");
-            var settings = new ConnectionSettings(uri)
-                .DefaultIndex("metric");
+            var settings = new ConnectionSettings(uri).DefaultIndex("metric");
+
             var client = new ElasticClient(settings);
 
-            var res = client.Sql.Query(x => x.Query(sqlQuery));
+            var res = client.Sql.Query(x => x.Query(
+                $"SELECT HISTOGRAM(timestamp, INTERVAL {args.Interval}) AS h, COUNT(1) AS c FROM {args.Index} " +
+                $"WHERE timestamp > CAST('{DateTime.UtcNow.AddHours(-args.OffSet):yyyy-MM-ddTHH:mm:ssZ}' AS DATE) AND timestamp < CAST('{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}' AS DATE) GROUP BY h"));
             Console.WriteLine($"time | count");
             foreach (var row in res.Rows)
             {
@@ -42,7 +45,7 @@ namespace query_sql
             });
         }
 
-        public static IEnumerable<TaxiTrip> QueryPrometheus(string queryString)
+        public static IEnumerable<TaxiTrip> QueryPrometheus(Arguments arguments)
         {
             var pProtocol = Environment.GetEnvironmentVariable("PROMETHEUS_PROTOCOL");
             var pUser = Environment.GetEnvironmentVariable("PROMETHEUS_USER");
@@ -50,21 +53,19 @@ namespace query_sql
             var pHost = Environment.GetEnvironmentVariable("PROMETHEUS_HOST");
             var pPort = Environment.GetEnvironmentVariable("PROMETHEUS_PORT");
 
-            var request = (HttpWebRequest)WebRequest.Create($"{pProtocol}://{pHost}:{pPort}/api/v1/query_range?{queryString}");
+            var request = (HttpWebRequest)WebRequest.Create($"{pProtocol}://{pHost}:{pPort}/api/v1/query_range?query={arguments.Query}&start={DateTime.UtcNow.AddHours(-arguments.OffSet):yyyy-MM-ddTHH:mm:ssZ}&end={DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}&step={arguments.Step}");
 
             var encoded = Convert.ToBase64String(System.Text.Encoding.GetEncoding("ISO-8859-1").GetBytes(pUser + ":" + pPassword));
             request.Headers.Add("Authorization", "Basic " + encoded);
             var resp = request.GetResponse();
-            var temp = JsonConvert.DeserializeObject<PrometheusMetric>(new StreamReader(resp.GetResponseStream()).ReadToEnd());
-            Console.WriteLine(JsonConvert.SerializeObject(temp.data.result[0].values.Select(x =>
-                new TaxiTrip(UnixTimestampToDateTime(Convert.ToDouble((string?) x[0])), Convert.ToInt32((string?) x[1]))).Select( x => 
-                    new {x.Time, x.FareAmount}
-                ))
-            );
-            return temp.data.result[0].values.Select(x =>
+            var temp = JsonConvert.DeserializeObject<PrometheusMetric>(new StreamReader(resp.GetResponseStream() ?? throw new InvalidOperationException()).ReadToEnd());
+            var queryResult = temp.data.result[0].values.Select(x =>
                 new TaxiTrip(UnixTimestampToDateTime(Convert.ToDouble(x[0])), Convert.ToInt32(x[1])));
-        }
 
-       
+            Console.WriteLine(queryResult.OrderBy(x => x.Time).First().Time);
+            Console.WriteLine(queryResult.OrderByDescending(x => x.Time).First().Time);
+
+            return queryResult;
+        }
     }
 }
