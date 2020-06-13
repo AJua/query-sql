@@ -2,12 +2,9 @@
 
 namespace query_sql
 {
-    partial class Program
+    public class TaxiTripFarePrediction
     {
-        public class TaxiTripFarePrediction
-        {
-            [ColumnName("Score")]
-            public float FareAmount { get; set; }
-        }
+        [ColumnName("Score")]
+        public float FareAmount { get; set; }
     }
 }
